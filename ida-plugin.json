@@ -6,7 +6,7 @@
     "entryPoint": "superhint.py",
     "description": "add/edit comments to hints. Supports local variable and structure fields",
     "urls": {
-      "repository": "https://github.com/p05wn/ida-scripts/SuperHint"
+      "repository": "https://github.com/p05wn/SuperHint"
     },
     "authors": [
       {
