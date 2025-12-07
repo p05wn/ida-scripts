@@ -1,14 +1,7 @@
 # ida-scripts
-1. edit hints
+1. SuperHint
+2. ???
 
-
-# edit hints
-simple script that allows user to insert custom information to hints
-supports local variable and structure fields
-
-
-## how to use
-> tested on IDA 8.4 pro
-
-
-## usage screenshot
+# 1. SuperHint
+IDA plugin that allows users to add comments to variable hints
+> supports local variable and structure fields

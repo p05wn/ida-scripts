@@ -1,0 +1,23 @@
+{
+  "IDAMetadataDescriptorVersion": 1,
+  "plugin": {
+    "name": "SuperHints",
+    "version": "1.0",
+    "entryPoint": "superhint.py",
+    "description": "add/edit comments to hints. Supports local variable and structure fields",
+    "urls": {
+      "repository": "https://github.com/p05wn/ida-scripts/SuperHint"
+    },
+    "authors": [
+      {
+        "name": "0s_W",
+        "email": "p05wnable@gmail.com"
+      }
+    ],
+    "categories": [
+      "ui-ux-and-visualization"
+    ],
+    "idaVersions": "8.4",
+    "license": "MIT"
+  }
+}
