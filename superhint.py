@@ -2,16 +2,14 @@ import os
 import idc
 import json
 import idaapi
-import ida_idp
 import ida_idaapi
 import ida_hexrays
 import ida_kernwin
+import ida_typeinf
 import ctypes
 
 
-struct_counter = 0
-struct_db = {"struct_counter": 0}
-
+struct_db = {}
 
 def edit_hint(cmt):
     return ida_kernwin.ask_text(1000, cmt, "Edit hint")
@@ -23,7 +21,7 @@ def set_lvar_hints(lvar, nw_hint):
     lvar.cmt = nw_hint
 
 def hotkey_pressed():
-    global struct_db, struct_counter
+    global struct_db
     print("[+] Edit Hint")
 
     viewer = ida_kernwin.get_current_widget()
@@ -51,22 +49,21 @@ def hotkey_pressed():
     struct_info = idaapi.tinfo_t()
     member_idx = item.get_udm(udm_info, struct_info)
     if(member_idx != -1):
-        struct_id = struct_info.get_type_cmt()
 
-        if(struct_id == None):
-            struct_id = "struct" + str(struct_counter)
-            struct_db[struct_id] = {}
-            struct_info.set_type_cmt(struct_id)
-            struct_counter += 1
-            struct_id = struct_info.get_type_cmt()
+        struct_tid = struct_info.get_tid()
+        ordinal = str(ida_typeinf.get_tid_ordinal(struct_tid))
+        
+
+        if ordinal not in struct_db:
+            struct_db[ordinal] = {}
 
 
         member_offset = str(udm_info.offset)
-        if member_offset not in struct_db[struct_id]:
-            struct_db[struct_id][member_offset] = ""
+        if member_offset not in struct_db[ordinal]:
+            struct_db[ordinal][member_offset] = ""
 
 
-        target_struct = struct_db[struct_id]
+        target_struct = struct_db[ordinal]
         new_hint = edit_hint(target_struct[member_offset])
 
         if(new_hint == None):
@@ -90,15 +87,14 @@ class hint_hooks(ida_hexrays.Hexrays_Hooks):
         struct_info = idaapi.tinfo_t()
         member_idx = item.get_udm(udm_info, struct_info)
         if(member_idx != -1):
-            struct_id = struct_info.get_type_cmt() 
-            #print(struct_id)
-            #print(struct_db)
+            struct_tid = struct_info.get_tid()
+            ordinal = str(ida_typeinf.get_tid_ordinal(struct_tid))
 
             member_offset = str(udm_info.offset)
-            if(struct_id == None or member_offset not in struct_db[struct_id]): 
+            if(int(ordinal) == 0 or ordinal not in struct_db or member_offset not in struct_db[ordinal]): 
                 return 0
     
-            target_struct = struct_db[struct_id]
+            target_struct = struct_db[ordinal]
             return 5, target_struct[member_offset], 1000
 
         return 0
@@ -118,22 +114,17 @@ class MyPlugmod(ida_idaapi.plugmod_t):
         self.struct_db_store()
 
     def struct_db_init(self):
-        global struct_db, struct_counter
+        global struct_db
 
         if os.path.exists(self.jsonname):
             with open(self.jsonname, 'r', encoding='utf-8') as f:
                 struct_db = json.load(f)
-                struct_counter = struct_db["struct_counter"]
-        else:
-            struct_counter = 0
-            struct_db = {"struct_counter": 0}
 
         #print(struct_db)
 
     def struct_db_store(self):
-        global struct_db, struct_counter
+        global struct_db
 
-        struct_db["struct_counter"] = struct_counter
         with open(self.jsonname, 'w', encoding='utf-8') as f:
             json.dump(struct_db, f)
 
