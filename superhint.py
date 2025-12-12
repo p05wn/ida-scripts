@@ -184,7 +184,7 @@ class MyPlugin(ida_idaapi.plugin_t):
     flags = ida_idaapi.PLUGIN_MULTI | ida_idaapi.PLUGIN_KEEP
     comment = "plugin for editing hints"
     help = "add/edit comments to hints. Supports local variable and structure fields"
-    wanted_name = "SuperHints"
+    wanted_name = "SuperHint"
     wanted_hotkey = "Shift-A"
 
     def init(self):
