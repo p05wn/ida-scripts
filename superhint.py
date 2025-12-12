@@ -14,12 +14,12 @@ NODE_NAME = "$ SuperHint"
 class hint_storage():
     def __init__(self):
         self.node = ida_netnode.netnode(NODE_NAME, 0, False)
-        if self.node == idaapi.BADNODE:
+        if self.node == idaapi.BADNODE or self.node.getblob(0, 'D') == None:
             print("[+] create new")
             self.node = ida_netnode.netnode(NODE_NAME, 0, True)
             self.struct_db = {}
         else:
-            print("[+] get prevone")
+            print("[+] has netnode")
             self.struct_db = json.loads(self.node.getblob(0, 'D').decode('utf-8'))
         
         print(self.struct_db)
