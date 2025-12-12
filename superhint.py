@@ -79,13 +79,13 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
     def edit_hint(self, cmt):
         return ida_kernwin.ask_text(1000, cmt, "Edit hint")
 
-    def set_local_var_hint(self, lvar):
+    def set_local_var_hint(self, vu, lvar):
         new_hint = self.edit_hint(lvar.cmt)
 
         if(new_hint == None):
             new_hint = lvar.cmt
 
-        lvar.cmt = new_hint
+        vu.set_lvar_cmt(lvar, new_hint)
         
 
     def hotkey_pressed(self):
@@ -105,7 +105,7 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
 
         lvar = item.get_lvar()
         if(lvar):
-            self.set_local_var_hint(lvar)
+            self.set_local_var_hint(vu, lvar)
             return
 
 
@@ -136,8 +136,6 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
             target_struct[member_offset] = new_hint    
             return
     
-
-
 
 class MyPlugmod(ida_idaapi.plugmod_t):
     def __init__(self):
