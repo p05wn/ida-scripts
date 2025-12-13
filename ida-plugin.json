@@ -2,7 +2,7 @@
   "IDAMetadataDescriptorVersion": 1,
   "plugin": {
     "name": "SuperHint",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "entryPoint": "superhint.py",
     "description": "add/edit comments to hints. Supports local variable and structure fields",
     "urls": {
