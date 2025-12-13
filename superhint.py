@@ -16,6 +16,8 @@ class hint_storage():
         if self.node == idaapi.BADNODE:
             print("[+] create new")
             self.node = ida_netnode.netnode(NODE_NAME, 0, True)
+            self.struct_db = {}
+            self.global_func_db = {}
         else:
             if self.node.getblob(0, 'D') == None:
                 self.struct_db = {}
@@ -72,9 +74,10 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
 
     def create_hint(self, vu):
 
-        if vu.get_current_item(idaapi.USE_MOUSE):
+        if vu.get_current_item(idaapi.USE_KEYBOARD):
                 item = vu.item.it
-
+        else:
+            return
 
         if(item.is_expr()):
             item_expr = item.cexpr
@@ -195,6 +198,7 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
 
                 target_db[traget_ea] = new_hint
                 return
+
 
 
 class MyPlugmod(ida_idaapi.plugmod_t):
