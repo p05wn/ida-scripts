@@ -13,7 +13,7 @@ Copy `SuperHint.py` to IDA Pro plugins folder
 >the hints will be stored in the  database file
 
 # Features
-- Supports Local and global variables structure fields and functions
+- can add/edit hints to Local/global variables structure fields and functions
 
 # Future updates
 - export/import hint database
