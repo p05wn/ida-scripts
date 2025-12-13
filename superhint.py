@@ -79,23 +79,18 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
             print("[!] Not in pesudocode")
             return
 
-
         if vu.get_current_item(idaapi.USE_KEYBOARD):
-            item = vu.item.it
+            item_expr = vu.item.e
+            item_citype = vu.item.citype
         else:
             return 0
-        
+
 
         if(vu.item.get_lvar()):
             lvar = vu.item.get_lvar()
-            if(lvar):
-                hint = lvar.cmt
-            else:
-                return 0
-            
-
-        if(item.is_expr()):
-            item_expr = item.cexpr
+            hint = lvar.cmt
+        
+        elif(item_citype == idaapi.VDI_EXPR):
 
             if(item_expr.op == idaapi.cot_memref or item_expr.op == idaapi.cot_memptr):
                 udm_info = idaapi.udm_t()
@@ -128,8 +123,9 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
             else:
                 return 0
 
-            if(hint == ""):
-                return 0
+
+        if(hint == ""):
+            return 0
 
         return 5, hint + "\n\n", 1000
         
@@ -147,7 +143,6 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
         
 
     def hotkey_pressed(self):
-        print("[+] Edit Hint")
 
         viewer = ida_kernwin.get_current_widget()
         if ida_kernwin.get_widget_type(viewer) != ida_kernwin.BWN_PSEUDOCODE:
@@ -156,14 +151,18 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
 
         vu = idaapi.get_widget_vdui(viewer)
         if vu.get_current_item(idaapi.USE_KEYBOARD):
-                item = vu.item.it
+                item_expr = vu.item.e
+                item_citype = vu.item.citype
         else:
             return
 
-        
-        if(item.is_expr()):
-            item_expr = item.cexpr
 
+        if(vu.item.get_lvar()):
+            lvar = vu.item.get_lvar()
+            self.set_local_var_hint(vu, lvar)
+            return
+
+        elif(item_citype == idaapi.VDI_EXPR):
             if(item_expr.op == idaapi.cot_memref or item_expr.op == idaapi.cot_memptr):
                 udm_info = idaapi.udm_t()
                 struct_info = idaapi.tinfo_t()
@@ -190,12 +189,6 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
                     target_struct[member_offset] = new_hint    
                     return
                 
-            elif(item_expr.op == idaapi.cot_var):
-                lvar = vu.item.get_lvar()
-                if(lvar):
-                    self.set_local_var_hint(vu, lvar)
-                    return
-
             elif(item_expr.op == idaapi.cot_obj):
                 traget_ea = str(item_expr.obj_ea)
                 target_db = self.hint_storage.new_globalvar_func_db(traget_ea)
@@ -244,8 +237,6 @@ class MyPlugmod(ida_idaapi.plugmod_t):
             self.osw_hint_manager = None
 
     def run(self, arg):        
-        print("[+] run called")
-
         if(self.osw_hint_manager == None):
             self.install_hint_hook()
         else:
