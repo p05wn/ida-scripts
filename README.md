@@ -2,7 +2,8 @@
 IDA plugin that allows users to add comments to variable hints
 
 # Installation
-**Please install from GitHub Releases instead of using hcli.**
+>**Please install from GitHub Releases instead of using hcli.**  
+
 Copy `SuperHint.py` to IDA Pro plugins folder
 
 
