@@ -2,7 +2,7 @@
   "IDAMetadataDescriptorVersion": 1,
   "plugin": {
     "name": "SuperHint",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "entryPoint": "superhint.py",
     "description": "add/edit comments to hints. Supports local variable and structure fields",
     "urls": {
@@ -19,6 +19,6 @@
     ],
     "idaVersions": ["8.4"],
     "license": "MIT",
-    "keywords": ["hint", "hints", "comments", "comment"]
+    "keywords": ["hint", "comment"]
   }
 }

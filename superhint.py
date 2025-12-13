@@ -1,4 +1,3 @@
-import os
 import idc
 import json
 import idaapi
@@ -14,36 +13,56 @@ NODE_NAME = "$ SuperHint"
 class hint_storage():
     def __init__(self):
         self.node = ida_netnode.netnode(NODE_NAME, 0, False)
-        if self.node == idaapi.BADNODE or self.node.getblob(0, 'D') == None:
+        if self.node == idaapi.BADNODE:
             print("[+] create new")
             self.node = ida_netnode.netnode(NODE_NAME, 0, True)
-            self.struct_db = {}
         else:
-            print("[+] has netnode")
-            self.struct_db = json.loads(self.node.getblob(0, 'D').decode('utf-8'))
+            if self.node.getblob(0, 'D') == None:
+                self.struct_db = {}
+            else:
+                self.struct_db = json.loads(self.node.getblob(0, 'D').decode('utf-8'))
+
+            if self.node.getblob(8, 'D') == None:
+                self.global_func_db = {}
+            else:
+                self.global_func_db = json.loads(self.node.getblob(8, 'D').decode('utf-8'))      
         
         print(self.struct_db)
-
-    def load_hint_storage(self):
-        self.struct_db = json.loads(self.node.getblob(0, 'D').decode('utf-8'))
+        print(self.global_func_db)
 
 
     def store_hint_storage(self):
         struct_db_json = json.dumps(self.struct_db)
+        global_func_db_json = json.dumps(self.global_func_db)
+
         self.node.setblob(struct_db_json.encode('utf-8'), 0, 'D')
+        self.node.setblob(global_func_db_json.encode('utf-8'), 8, 'D') 
 
     def get_struct_hint(self, ordinal):
-
         if ordinal not in self.struct_db:
             return 0
         else:
             return self.struct_db[ordinal]
+                
+    def get_globalvar_func_db(self, ea):
+        if ea not in self.global_func_db:
+            return 0
+        else:
+            return self.global_func_db[ea]
 
-    def set_struct_hint(self, ordinal, offset, data):
-        return
+    def new_struct_hint(self, ordinal):
+        if ordinal not in self.struct_db:
+            self.struct_db[ordinal] = {}
+
+        return self.struct_db[ordinal]
+
+    def new_globalvar_func_db(self, ea):
+        if ea not in self.global_func_db:
+            self.global_func_db[ea] = ""
+        
+        return self.global_func_db
+
     
-    def add_new_struct_hint(self, ordinal):
-        self.struct_db[ordinal] = {}
 
 
 class HintManager(ida_hexrays.Hexrays_Hooks):
@@ -52,29 +71,57 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
         self.hint_storage  = hint_storage()
 
     def create_hint(self, vu):
+
         if vu.get_current_item(idaapi.USE_MOUSE):
-                item = vu.item
+                item = vu.item.it
 
-        lvar = item.get_lvar()
-        if(lvar):
-            return 5, lvar.cmt, 1000
-        
-        udm_info = idaapi.udm_t()
-        struct_info = idaapi.tinfo_t()
-        member_idx = item.get_udm(udm_info, struct_info)
-        if(member_idx != -1):
-            struct_tid = struct_info.get_tid()
-            ordinal = str(ida_typeinf.get_tid_ordinal(struct_tid))
 
-            member_offset = str(udm_info.offset)
-            target_struct = self.hint_storage.get_struct_hint(ordinal)
+        if(item.is_expr()):
+            item_expr = item.cexpr
 
-            if(int(ordinal) == 0 or target_struct == 0 or member_offset not in target_struct): 
+            if(item_expr.op == idaapi.cot_memref or item_expr.op == idaapi.cot_memptr):
+                udm_info = idaapi.udm_t()
+                struct_info = idaapi.tinfo_t()
+                member_idx = vu.item.get_udm(udm_info, struct_info)
+
+                if(member_idx != -1):
+                    struct_tid = struct_info.get_tid()
+                    ordinal = str(ida_typeinf.get_tid_ordinal(struct_tid))
+
+                    member_offset = str(udm_info.offset)
+
+                    if(int(ordinal) == 0):
+                        return 0
+
+                    target_struct = self.hint_storage.get_struct_hint(ordinal)
+
+                    if(target_struct == 0 or member_offset not in target_struct):
+                        return 0
+                    
+                    hint = target_struct[member_offset]
+
+            elif(item_expr.op == idaapi.cot_var):
+                lvar = vu.item.get_lvar()
+                if(lvar):
+                    hint = lvar.cmt
+                else:
+                    return 0
+
+            elif(item_expr.op == idaapi.cot_obj):
+                target_global_func = self.hint_storage.get_globalvar_func_db(str(item_expr.obj_ea))
+                if(target_global_func == 0):
+                    return 0
+
+                hint = target_global_func
+
+            else:
                 return 0
-    
-            return 5, target_struct[member_offset], 1000
 
-        return 0
+            if(hint == ""):
+                return 0
+
+            return 5, hint + "\n\n", 1000
+        
 
     def edit_hint(self, cmt):
         return ida_kernwin.ask_text(1000, cmt, "Edit hint")
@@ -97,45 +144,58 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
             return
 
         vu = idaapi.get_widget_vdui(viewer)
-        if vu.get_current_item(idaapi.USE_MOUSE):
-                item = vu.item
+        if vu.get_current_item(idaapi.USE_KEYBOARD):
+                item = vu.item.it
         else:
             return
 
+        
+        if(item.is_expr()):
+            item_expr = item.cexpr
 
-        lvar = item.get_lvar()
-        if(lvar):
-            self.set_local_var_hint(vu, lvar)
-            return
+            if(item_expr.op == idaapi.cot_memref or item_expr.op == idaapi.cot_memptr):
+                udm_info = idaapi.udm_t()
+                struct_info = idaapi.tinfo_t()
+                member_idx = vu.item.get_udm(udm_info, struct_info)
+                if(member_idx != -1):
+                
+                    struct_tid = struct_info.get_tid()
+                    ordinal = str(ida_typeinf.get_tid_ordinal(struct_tid))
 
+                    if(ordinal == 0):
+                        return
 
-        udm_info = idaapi.udm_t()
-        struct_info = idaapi.tinfo_t()
-        member_idx = item.get_udm(udm_info, struct_info)
-        if(member_idx != -1):
+                    target_struct = self.hint_storage.new_struct_hint(ordinal)
 
-            struct_tid = struct_info.get_tid()
-            ordinal = str(ida_typeinf.get_tid_ordinal(struct_tid))
+                    member_offset = str(udm_info.offset)
+                    if member_offset not in target_struct:
+                        target_struct[member_offset] = ""
 
+                    new_hint = self.edit_hint(target_struct[member_offset])
 
-            if self.hint_storage.get_struct_hint(ordinal) == 0:
-                self.hint_storage.add_new_struct_hint(ordinal)
+                    if(new_hint == None):
+                        new_hint = target_struct[member_offset]
 
+                    target_struct[member_offset] = new_hint    
+                    return
+                
+            elif(item_expr.op == idaapi.cot_var):
+                lvar = vu.item.get_lvar()
+                if(lvar):
+                    self.set_local_var_hint(vu, lvar)
+                    return
 
-            target_struct = self.hint_storage.get_struct_hint(ordinal)
+            elif(item_expr.op == idaapi.cot_obj):
+                traget_ea = str(item_expr.obj_ea)
+                target_db = self.hint_storage.new_globalvar_func_db(traget_ea)
+                new_hint = self.edit_hint(target_db[traget_ea])
 
-            member_offset = str(udm_info.offset)
-            if member_offset not in target_struct:
-                target_struct[member_offset] = ""
-            
-            new_hint = self.edit_hint(target_struct[member_offset])
+                if(new_hint == None):
+                    new_hint = target_db[traget_ea]
 
-            if(new_hint == None):
-                new_hint = target_struct[member_offset]
+                target_db[traget_ea] = new_hint
+                return
 
-            target_struct[member_offset] = new_hint    
-            return
-    
 
 class MyPlugmod(ida_idaapi.plugmod_t):
     def __init__(self):

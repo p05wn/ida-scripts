@@ -13,8 +13,7 @@ Click a variable or struct field in the pseudo-code and press `Shift`+`A` to add
 >the hints will be stored in the  database file*
 
 # Features
-- Supports Local variable and structure fields
+- Supports Local and global variables structure fields and functions
 
 # Future updates
-- Supporting global variables and functions
 - export/import structure hint database
