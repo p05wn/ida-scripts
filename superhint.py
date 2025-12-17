@@ -1,11 +1,14 @@
 import idc
 import json
 import idaapi
+import idautils
+import ida_name
 import ida_idaapi
 import ida_hexrays
 import ida_kernwin
 import ida_netnode
 import ida_typeinf
+
 
 NODE_NAME = "$ SuperHint"
 
@@ -34,11 +37,13 @@ class hint_storage(idaapi.IDB_Hooks):
 
 
     def savebase(self):
+        print("")
         self.update_struct_db()
+        self.update_global_func_db()
 
 
     def update_struct_db(self):
-        print("")
+        
         for key in self.struct_db.keys():
             target_ti = idaapi.get_idati()
             struct_name = ida_typeinf.get_numbered_type_name(target_ti, int(key))
@@ -54,12 +59,23 @@ class hint_storage(idaapi.IDB_Hooks):
                 return 
             
             if(struct_name != self.struct_db[key]["name"]):
-                print(f"[+] fuck struct name has been changed : {struct_name}")
                 self.struct_db[key]["name"] = struct_name
-                print(self.struct_db)
+
+
+    def update_global_func_db(self):
+        
+        for key in self.global_func_db.keys():
+            current_name = ida_name.get_name(int(key))
             
+            if current_name == 0 or current_name == "":
+                self.global_func_db.pop(key)
+                return
 
+            prev_name = self.global_func_db[key]["name"]
+            if(prev_name != current_name):
+                self.global_func_db[key]["name"] = current_name
 
+        print(self.global_func_db)
 
 
     def store_hint_storage(self):
@@ -89,9 +105,11 @@ class hint_storage(idaapi.IDB_Hooks):
 
         return self.struct_db[ordinal]
 
-    def new_globalvar_func_db(self, ea):
-        if ea not in self.global_func_db:
-            self.global_func_db[ea] = ""
+    def new_globalvar_func_db(self, target_ea):
+        if target_ea not in self.global_func_db:
+            self.global_func_db[target_ea] = {}
+            self.global_func_db[target_ea]["hint"] = ""
+            self.global_func_db[target_ea]["name"] = ida_name.get_name(int(target_ea))
         
         return self.global_func_db
 
@@ -151,7 +169,7 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
                 if(target_global_func == 0):
                     return 0
 
-                hint = target_global_func
+                hint = target_global_func["hint"]
 
             else:
                 return 0
@@ -223,14 +241,14 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
                     return
                 
             elif(item_expr.op == idaapi.cot_obj):
-                traget_ea = str(item_expr.obj_ea)
-                target_db = self.hint_storage.new_globalvar_func_db(traget_ea)
-                new_hint = self.edit_hint(target_db[traget_ea])
+                target_ea = str(item_expr.obj_ea)
+                target_db = self.hint_storage.new_globalvar_func_db(target_ea)
+                new_hint = self.edit_hint(target_db[target_ea]["hint"])
 
                 if(new_hint == None):
-                    new_hint = target_db[traget_ea]
+                    new_hint = target_db[target_ea]["hint"]
 
-                target_db[traget_ea] = new_hint
+                target_db[target_ea]["hint"] = new_hint
                 return
 
 
@@ -291,13 +309,3 @@ class MyPlugin(ida_idaapi.plugin_t):
 
 def PLUGIN_ENTRY():
     return MyPlugin()
-
-
-"""
-구조체와 전역변수는 생성할때 이름 필드도 따로 저장한다.
-
-저장 시
-
-
-
-"""
