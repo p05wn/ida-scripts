@@ -38,9 +38,7 @@ class hint_storage(idaapi.IDB_Hooks):
 
     def savebase(self):
         print("")
-        self.update_struct_db()
-        self.update_global_func_db()
-
+        self.store_hint_storage()
 
     def update_struct_db(self):
         
@@ -49,6 +47,7 @@ class hint_storage(idaapi.IDB_Hooks):
             struct_name = ida_typeinf.get_numbered_type_name(target_ti, int(key))
 
             if struct_name == "" or struct_name == None:
+                print(f"key: {key}")
                 ordinal = ida_typeinf.get_type_ordinal(None, self.struct_db[key]["name"])
 
                 if(ordinal == None or ordinal == 0):
@@ -60,6 +59,9 @@ class hint_storage(idaapi.IDB_Hooks):
             
             if(struct_name != self.struct_db[key]["name"]):
                 self.struct_db[key]["name"] = struct_name
+            
+        
+        #print(self.struct_db)
 
 
     def update_global_func_db(self):
@@ -75,10 +77,13 @@ class hint_storage(idaapi.IDB_Hooks):
             if(prev_name != current_name):
                 self.global_func_db[key]["name"] = current_name
 
-        print(self.global_func_db)
+        #print(self.global_func_db)
 
 
     def store_hint_storage(self):
+        self.update_struct_db()
+        self.update_global_func_db()
+
         struct_db_json = json.dumps(self.struct_db)
         global_func_db_json = json.dumps(self.global_func_db)
 
@@ -157,12 +162,12 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
                     if(int(ordinal) == 0):
                         return 0
 
-                    target_struct = self.hint_storage.get_struct_hint(ordinal)
+                    target_db = self.hint_storage.get_struct_hint(ordinal)
 
-                    if(target_struct == 0 or member_offset not in target_struct):
+                    if(target_db == 0 or member_offset not in target_db):
                         return 0
                     
-                    hint = target_struct[member_offset]
+                    hint = target_db[member_offset]
 
             elif(item_expr.op == idaapi.cot_obj):
                 target_global_func = self.hint_storage.get_globalvar_func_db(str(item_expr.obj_ea))
@@ -226,18 +231,22 @@ class HintManager(ida_hexrays.Hexrays_Hooks):
                     if(ordinal == 0):
                         return
 
-                    target_struct = self.hint_storage.new_struct_hint(ordinal)
+                    target_db = self.hint_storage.new_struct_hint(ordinal)
 
                     member_offset = str(udm_info.offset)
-                    if member_offset not in target_struct:
-                        target_struct[member_offset] = ""
+                    if member_offset not in target_db:
+                        target_db[member_offset] = ""
 
-                    new_hint = self.edit_hint(target_struct[member_offset])
+                    new_hint = self.edit_hint(target_db[member_offset])
+
+                    if(new_hint == ""):
+                        target_db.pop(member_offset)
+                        return
 
                     if(new_hint == None):
-                        new_hint = target_struct[member_offset]
+                        new_hint = target_db[member_offset]
 
-                    target_struct[member_offset] = new_hint    
+                    target_db[member_offset] = new_hint
                     return
                 
             elif(item_expr.op == idaapi.cot_obj):
@@ -258,6 +267,7 @@ class MyPlugmod(ida_idaapi.plugmod_t):
         self.init_state = 0
         self.filename = idc.get_root_filename()
         self.osw_hint_manager = None
+        self.install_hint_hook()
 
     def __del__(self):
         self.osw_hint_manager.hint_storage.store_hint_storage()
@@ -288,24 +298,20 @@ class MyPlugmod(ida_idaapi.plugmod_t):
             self.osw_hint_manager.unhook()
             self.osw_hint_manager = None
 
-    def run(self, arg):        
-        if(self.osw_hint_manager == None):
-            self.install_hint_hook()
-        else:
-            self.osw_hint_manager.hotkey_pressed()
+    def run(self, arg):
+        self.osw_hint_manager.hotkey_pressed()
         
 
 class MyPlugin(ida_idaapi.plugin_t):
     flags = ida_idaapi.PLUGIN_MULTI | ida_idaapi.PLUGIN_KEEP
     comment = "plugin for editing hints"
-    help = "add/edit comments to hints. Supports local variable and structure fields"
+    help = "add/edit custom hints"
     wanted_name = "SuperHint"
     wanted_hotkey = "Shift-A"
 
     def init(self):
         print("[+] SuperHint Init")
         return MyPlugmod()
-
 
 def PLUGIN_ENTRY():
     return MyPlugin()

@@ -3,17 +3,15 @@ IDA plugin that allows users to add comments to variable hints
 
 # Installation
 >**Please install from GitHub Releases instead of using hcli.**  
-
-Copy `SuperHint.py` to IDA Pro plugins folder
+1. Copy `SuperHint.py` to IDA Pro plugins folder
 
 
 # How to use
 ![gif](superhint.gif)
-1. Press `Shift`+`A` to enable the feature
-2. Click a variable or struct field in the pseudo-code and press `Shift`+`A` to add a hint comment.  
+- Press `Shift`+`A` on any variable or struct field to add a custom hint
 
 # Features
-- can add/edit hints to Local/global variables structure fields and functions
+- add/edit hints to Local/global variables structure fields and functions
 
 
 # Future updates
